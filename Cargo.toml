@@ -1,0 +1,38 @@
+[package]
+name = "epd-ssd1680"
+version = "0.1.0"
+license = "MIT"
+edition = "2024"
+
+[dependencies]
+defmt-or-log = "*"
+
+# embedded utils
+#-------------------------------------------------------------------------------
+embedded-hal = "*"
+embedded-hal-async = { version = "*", optional = true }
+maybe-async-cfg = "*"
+
+# static_cell = "*"
+# heapless = { version = "*", features = ["ufmt"] }
+# embedded-hal-bus = "*"
+#-------------------------------------------------------------------------------
+
+# screen support
+#-------------------------------------------------------------------------------
+display-interface = "*"
+display-interface-spi = "*"
+embedded-graphics = "*"
+#-------------------------------------------------------------------------------
+
+[features]
+# use log for logging
+log = ["defmt-or-log/log"]
+# use dfmt for logging
+defmt = ["defmt-or-log/log"]
+
+# use std environment (else no_std)
+std = []
+
+# use async hardware interface
+async = ["dep:embedded-hal-async"]
