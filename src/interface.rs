@@ -1,5 +1,5 @@
 /// use standard Display Errors
-use display_interface::DisplayError;
+// use display_interface::DisplayError;
 /// use standard Display SPI interface
 use display_interface_spi::SPIInterface;
 
@@ -12,7 +12,7 @@ use embedded_hal_async::spi::SpiDevice as SpiDeviceAsync;
 
 
 #[maybe_async_cfg::maybe(sync(keep_self), async(feature = "async"))]
-pub struct DisplayInterface<SPI, DC, BUSY, RESET> {
+pub struct Ssd1680Interface<SPI, DC, BUSY, RESET> {
     /// SPI device
     spi_interface: SPIInterface<SPI, DC>,
     /// Low for busy, Wait until display is ready!
@@ -26,7 +26,7 @@ pub struct DisplayInterface<SPI, DC, BUSY, RESET> {
     sync(keep_self),
     async(feature = "async")
 )]
-impl<SPI, DC, BUSY, RESET> DisplayInterface<SPI, DC, BUSY, RESET>
+impl<SPI, DC, BUSY, RESET> Ssd1680Interface<SPI, DC, BUSY, RESET>
 where
     SPI: SpiDevice,
     DC: OutputPin,

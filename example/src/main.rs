@@ -1,10 +1,9 @@
 #![no_std]
 #![no_main]
 
-use epd_ssd1680::Ssd1680;
 use esp_hal::clock::CpuClock;
+use esp_hal::main;
 use esp_hal::time::{Duration, Instant};
-use esp_hal::{main, peripherals};
 
 #[panic_handler]
 fn panic(_: &core::panic::PanicInfo) -> ! {
@@ -28,44 +27,52 @@ fn main() -> ! {
     // create the heap space (reclaiming bootloader RAM)
     esp_alloc::heap_allocator!(#[esp_hal::ram(reclaimed)] size: 73744);
 
-    // FOLLOWING IS CONFIGURED FOR HELTEC WIRELESS PAPER board
+    // CONFIGURATION - using HELTEC WIRELESS PAPER board
     // ------------------------------------------------------------------
-    let sck = peripherals.GPIO3;
-    let mosi = peripherals.GPIO2;
-    let cs = peripherals.GPIO4;
+    let sck_pin = peripherals.GPIO3;
+    let mosi_pin = peripherals.GPIO2;
+    let cs_pin = peripherals.GPIO4;
+    let dc_pin = peripherals.GPIO5;
+    let reset_pin = peripherals.GPIO6;
+    let busy_pin = peripherals.GPIO7;
     // ------------------------------------------------------------------
-    let spi_bus =
+
+    // create the SPI device on the SoC
+    let spi_device = embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(
         esp_hal::spi::master::Spi::new(peripherals.SPI3, esp_hal::spi::master::Config::default())
             .unwrap()
-            .with_sck(sck)
-            .with_mosi(mosi);
-    let cs_pin = esp_hal::gpio::Output::new(
-        cs,
-        esp_hal::gpio::Level::Low,
-        esp_hal::gpio::OutputConfig::default(),
-    );
-
-    let spi_device = embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(spi_bus, cs_pin).unwrap();
-    use display_interface_spi::SPIInterface;
-    let spi_interface = SPIInterface::new(
-        spi_device,
+            .with_sck(sck_pin)
+            .with_mosi(mosi_pin),
         esp_hal::gpio::Output::new(
-            peripherals.GPIO5,
+            cs_pin,
             esp_hal::gpio::Level::Low,
             esp_hal::gpio::OutputConfig::default(),
         ),
-    );
+    )
+    .unwrap();
 
-    // create the driver object
-    use epd_ssd1680::interface::DisplayInterface;
-    let busy = esp_hal::gpio::Input::new(peripherals.GPIO7, esp_hal::gpio::InputConfig::default());
-    let reset = esp_hal::gpio::Output::new(
-        peripherals.GPIO6,
+
+    // provide driver for spi_device
+
+    use display_interface_spi::SPIInterface;
+    let dc = esp_hal::gpio::Output::new(
+        dc_pin,
         esp_hal::gpio::Level::Low,
         esp_hal::gpio::OutputConfig::default(),
     );
-    let screen_interface= DisplayInterface::new(
-        spi_interface, busy, reset,
+    let spi_interface = SPIInterface::new(spi_device, dc);
+
+    // create the driver object
+    let busy = esp_hal::gpio::Input::new(busy_pin, esp_hal::gpio::InputConfig::default());
+    let reset = esp_hal::gpio::Output::new(
+        reset_pin,
+        esp_hal::gpio::Level::Low,
+        esp_hal::gpio::OutputConfig::default(),
+    );
+    let screen_interface = epd_ssd1680::interface::Ssd1680Interface::new(
+        spi_interface,
+        busy,
+        reset,
         &mut esp_hal::delay::Delay::new(),
     );
     let ssd1680 = epd_ssd1680::Ssd1680::new(
@@ -73,7 +80,6 @@ fn main() -> ! {
         embedded_graphics::geometry::Size::new(122, 250),
         epd_ssd1680::DisplayRotation::Rotate0,
     );
-
 
     loop {
         let delay_start = Instant::now();
