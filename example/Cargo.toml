@@ -18,6 +18,7 @@ embedded-hal-async = "*"
 
 epd-ssd1680 = { path = ".." }
 display-interface-spi = "*"
+embedded-graphics = "*"
 
 [features]
 default = ["log"]

@@ -792,6 +792,7 @@ name = "example"
 version = "0.0.1"
 dependencies = [
  "display-interface-spi",
+ "embedded-graphics",
  "embedded-hal 1.0.0",
  "embedded-hal-async",
  "embedded-hal-bus",

@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+use epd_ssd1680::Ssd1680;
 use esp_hal::clock::CpuClock;
 use esp_hal::time::{Duration, Instant};
 use esp_hal::{main, peripherals};
@@ -63,7 +64,15 @@ fn main() -> ! {
         esp_hal::gpio::Level::Low,
         esp_hal::gpio::OutputConfig::default(),
     );
-    let interface = DisplayInterface::new(spi_interface, busy, reset);
+    let screen_interface= DisplayInterface::new(
+        spi_interface, busy, reset,
+        &mut esp_hal::delay::Delay::new(),
+    );
+    let ssd1680 = epd_ssd1680::Ssd1680::new(
+        screen_interface,
+        embedded_graphics::geometry::Size::new(122, 250),
+        epd_ssd1680::DisplayRotation::Rotate0,
+    );
 
 
     loop {
