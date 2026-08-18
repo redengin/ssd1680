@@ -52,9 +52,9 @@ where
     /// Resets the device.
     pub fn reset(&mut self, delay: &mut impl DelayNs) {
         self.reset.set_high().unwrap();
-        delay.delay_ms(100);
+        delay.delay_ms(10);
         self.reset.set_low().unwrap();
-        delay.delay_ms(100);
+        delay.delay_ms(10);
         self.reset.set_high().unwrap();
     }
 }

@@ -19,7 +19,6 @@ pub mod interface;
 /// logical protocol commands
 mod commands;
 
-
 #[maybe_async_cfg::maybe(sync(keep_self), async(feature = "async"))]
 pub struct Ssd1680<DI> {
     spi_interface: DI,
@@ -28,58 +27,94 @@ pub struct Ssd1680<DI> {
 }
 #[maybe_async_cfg::maybe(
     sync(keep_self),
-    async(feature = "async",
-        idents(
-            WriteOnlyDataCommand(async = "AsyncWriteOnlyDataCommand")
-        )
+    async(
+        feature = "async",
+        idents(WriteOnlyDataCommand(async = "AsyncWriteOnlyDataCommand"))
     )
 )]
-impl<DI> Ssd1680<DI>
-{
+impl<DI> Ssd1680<DI> {
     pub fn new(
         spi_interface: DI,
         size: embedded_graphics::geometry::Size,
         rotation: DisplayRotation,
-    ) -> Self {
-        Self {
-            spi_interface, 
+    ) -> Result<Self, DisplayError> {
+        let mut this = Self {
+            spi_interface,
             size,
             rotation,
+        };
+
+        this.init()?;
+
+        Ok(this)
+    }
+
+    pub fn init(&mut self) -> Result<(), DisplayError> {
+        // hardware reset
+        // self.spi_interface.reset();
+
+        // soft reset
+        // Commands::SoftReset;
+        // self.spi_interface.wait_until_idle();
+
+        // configure display height
+        // Commnds::DriverOutputControl{height: self.size().height};
+
+
+
+        // TODO
+        Err(DisplayError::DataFormatNotImplemented)
+    }
+
+    fn draw(&mut self, pixel: Pixel<BinaryColor>) -> Result<(), DisplayError> {
+        let size = self.size();
+        let Pixel(point, color) = pixel;
+        if (point.x < 0)
+            || (point.y < 0)
+            || (point.x as u32 > size.width)
+            || (point.y as u32 > size.height)
+        {
+            // pixel outside of screen
+            return Ok(());
         }
+
+        // TODO
+        Err(DisplayError::DataFormatNotImplemented)
     }
 }
 
-use embedded_graphics::{draw_target::DrawTarget, pixelcolor::BinaryColor};
-use embedded_graphics::geometry::OriginDimensions;
 use display_interface::DisplayError;
+use embedded_graphics::Pixel;
+use embedded_graphics::geometry::OriginDimensions;
+use embedded_graphics::{draw_target::DrawTarget, pixelcolor::BinaryColor};
 
-impl <DI> OriginDimensions for Ssd1680<DI> {
+impl<DI> OriginDimensions for Ssd1680<DI> {
     fn size(&self) -> embedded_graphics::prelude::Size {
         return match self.rotation {
-            DisplayRotation::Rotate0 |
-            DisplayRotation::Rotate180 => self.size,
+            DisplayRotation::Rotate0 | DisplayRotation::Rotate180 => self.size,
 
-            DisplayRotation::Rotate90 |
-            DisplayRotation::Rotate270 =>
+            DisplayRotation::Rotate90 | DisplayRotation::Rotate270 => {
                 embedded_graphics::geometry::Size::new(self.size.height, self.size.width)
-        }
+            }
+        };
     }
 }
 
-
-impl <DI> DrawTarget for Ssd1680<DI> {
+impl<DI> DrawTarget for Ssd1680<DI> {
     type Color = BinaryColor;
 
     type Error = DisplayError;
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
     where
-        I: IntoIterator<Item = embedded_graphics::prelude::Pixel<Self::Color>> {
-        todo!()
+        I: IntoIterator<Item = embedded_graphics::prelude::Pixel<Self::Color>>,
+    {
+        for p in pixels.into_iter() {
+            self.draw(p)?;
+        }
+        Ok(())
     }
 }
-
-
 
 /// Display rotation.
 // #[derive(Copy, Clone, Debug)]
