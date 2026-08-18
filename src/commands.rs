@@ -1,7 +1,10 @@
+/// support the standard display errors
+use display_interface::DisplayError;
+
 /// https://resource.heltec.cn/download/Wireless_Paper/E-Ink%20Datasheet/E-INK%20V1.0(DEPG0213BNS800F41-2.0)%20.pdf#page=15
 pub enum Commands {
     DriverOutputControl {
-        height: u32,    // A: height-1, not sure what B does (appears to always be 0)
+        height: u32, // A: height-1, not sure what B does (appears to always be 0)
     },
     DataEntryMode(data_entry_mode::DataSequence),
     SoftReset,
@@ -9,7 +12,7 @@ pub enum Commands {
     /// start the screen update sequence
     MasterActivation,
     /// TODO
-    DisplayUpdateControl1{
+    DisplayUpdateControl1 {
         red_option: display_update_control1::RamOption,
         bw_option: display_update_control1::RamOption,
         mode: display_update_control1::Mode,
@@ -19,9 +22,19 @@ pub enum Commands {
     StartBwUpdate,
     /// after this command, data will be written into RED RAM until a command change
     StartRedUpdate,
-    BorderWaveForm{vbd: border_wave_form::Vbd, vbd_level: border_wave_form::VbdLevel, lut: border_wave_form::Lut},
-    SetRamWidth{start: u8, end: u8},
-    SetRamHeight{start: u16, end: u16},
+    BorderWaveForm {
+        vbd: border_wave_form::Vbd,
+        vbd_level: border_wave_form::VbdLevel,
+        lut: border_wave_form::Lut,
+    },
+    SetRamWidth {
+        start: u8,
+        end: u8,
+    },
+    SetRamHeight {
+        start: u16,
+        end: u16,
+    },
     SetRamXAddress(u8),
     SetRamYAddress(u16),
 }
@@ -33,20 +46,32 @@ impl Commands {
             Self::SoftReset => 0x12,
             Self::TempSensorSelect(_) => 0x18,
             Self::MasterActivation => 0x20,
-            Self::DisplayUpdateControl1{..} => 0x21,
+            Self::DisplayUpdateControl1 { .. } => 0x21,
             Self::DisplayUpdateControl2(_) => 0x22,
             Self::StartBwUpdate => 0x24,
             Self::StartRedUpdate => 0x26,
-            Self::BorderWaveForm {..} => 0x3C,
-            Self::SetRamWidth {..} => 0x44,
-            Self::SetRamHeight {..} => 0x45,
+            Self::BorderWaveForm { .. } => 0x3C,
+            Self::SetRamWidth { .. } => 0x44,
+            Self::SetRamHeight { .. } => 0x45,
             Self::SetRamXAddress(_) => 0x4E,
             Self::SetRamYAddress(_) => 0x4F,
         };
     }
+
+    #[maybe_async_cfg::maybe(
+        sync(keep_self),
+        async(
+            feature = "async",
+            idents(WriteOnlyDataCommand(async = "AsyncWriteOnlyDataCommand"))
+        )
+    )]
+    pub fn send<DI>(&self, device: DI) -> Result<(), DisplayError>
+    where
+        DI: display_interface::WriteOnlyDataCommand,
+    {
+        todo!()
+    }
 }
-
-
 
 // specialized properties for commands
 //------------------------------------------------------------------------------
@@ -98,9 +123,9 @@ mod border_wave_form {
     pub enum Vbd {
         GsTransition = 0b00,
         FixLevel = 0b01,
-        Vcom     = 0b10,
+        Vcom = 0b10,
         /// reset default
-        HiZ      = 0b11,
+        HiZ = 0b11,
     }
 
     pub enum VbdLevel {
@@ -117,5 +142,4 @@ mod border_wave_form {
         Lut2 = 0b10,
         Lut3 = 0b11,
     }
-
 }
