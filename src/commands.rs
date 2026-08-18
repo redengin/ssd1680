@@ -20,6 +20,10 @@ pub enum Commands {
     /// after this command, data will be written into RED RAM until a command change
     StartRedUpdate,
     BorderWaveForm{vbd: border_wave_form::Vbd, vbd_level: border_wave_form::VbdLevel, lut: border_wave_form::Lut},
+    SetRamWidth{start: u8, end: u8},
+    SetRamHeight{start: u16, end: u16},
+    SetRamXAddress(u8),
+    SetRamYAddress(u16),
 }
 impl Commands {
     pub fn id(&self) -> u8 {
@@ -34,6 +38,10 @@ impl Commands {
             Self::StartBwUpdate => 0x24,
             Self::StartRedUpdate => 0x26,
             Self::BorderWaveForm {..} => 0x3C,
+            Self::SetRamWidth {..} => 0x44,
+            Self::SetRamHeight {..} => 0x45,
+            Self::SetRamXAddress(_) => 0x4E,
+            Self::SetRamYAddress(_) => 0x4F,
         };
     }
 }
