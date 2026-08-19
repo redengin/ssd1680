@@ -10,8 +10,8 @@
 // choose std or no_std environment
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// /// provide logging primitives (and derive helpers)
-// use defmt_or_log::*;
+/// provide logging primitives
+use defmt_or_log::*;
 
 /// provide hardware interface
 pub mod interface;
@@ -21,7 +21,7 @@ mod commands;
 
 #[maybe_async_cfg::maybe(sync(keep_self), async(feature = "async"))]
 pub struct Ssd1680<DI> {
-    spi_interface: DI,
+    interface: DI,
     size: embedded_graphics::geometry::Size,
     rotation: DisplayRotation,
 }
@@ -32,14 +32,16 @@ pub struct Ssd1680<DI> {
         idents(WriteOnlyDataCommand(async = "AsyncWriteOnlyDataCommand"))
     )
 )]
-impl<DI> Ssd1680<DI> {
+impl<DI> Ssd1680<DI>
+where DI: WriteOnlyDataCommand
+ {
     pub fn new(
-        spi_interface: DI,
+        interface: DI,
         size: embedded_graphics::geometry::Size,
         rotation: DisplayRotation,
     ) -> Result<Self, DisplayError> {
         let mut this = Self {
-            spi_interface,
+            interface,
             size,
             rotation,
         };
@@ -67,7 +69,8 @@ impl<DI> Ssd1680<DI> {
     }
 
     fn draw(&mut self, pixel: Pixel<BinaryColor>) -> Result<(), DisplayError> {
-        let size = self.size();
+        // FIXME
+        let size = self.size;
         let Pixel(point, color) = pixel;
         if (point.x < 0)
             || (point.y < 0)
@@ -83,7 +86,7 @@ impl<DI> Ssd1680<DI> {
     }
 }
 
-use display_interface::DisplayError;
+use display_interface::{WriteOnlyDataCommand, AsyncWriteOnlyDataCommand, DisplayError};
 use embedded_graphics::Pixel;
 use embedded_graphics::geometry::OriginDimensions;
 use embedded_graphics::{draw_target::DrawTarget, pixelcolor::BinaryColor};
@@ -100,7 +103,9 @@ impl<DI> OriginDimensions for Ssd1680<DI> {
     }
 }
 
-impl<DI> DrawTarget for Ssd1680<DI> {
+impl<DI> DrawTarget for Ssd1680<DI>
+where DI: WriteOnlyDataCommand
+{
     type Color = BinaryColor;
 
     type Error = DisplayError;

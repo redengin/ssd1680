@@ -37,30 +37,35 @@ fn main() -> ! {
     let busy_pin = peripherals.GPIO7;
     // ------------------------------------------------------------------
 
-    // create the SPI device on the SoC
-    let spi_device = embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(
-        esp_hal::spi::master::Spi::new(peripherals.SPI3, esp_hal::spi::master::Config::default())
+    // create the SOC SPI bus
+    #[cfg(not(feature = "async"))]
+    let spi = esp_hal::spi::master::Spi::new(peripherals.SPI3, esp_hal::spi::master::Config::default())
             .unwrap()
             .with_sck(sck_pin)
-            .with_mosi(mosi_pin),
+            .with_mosi(mosi_pin);
+    #[cfg(feature = "async")]
+    let spi = esp_hal::spi::master::Spi::new(peripherals.SPI3, esp_hal::spi::master::Config::default())
+            .unwrap()
+            .with_sck(sck_pin)
+            .with_mosi(mosi_pin)
+            .into_async();
+
+    // create SPI interface for display
+    let spi_interface = display_interface_spi::SPIInterface::new(
+        embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(
+            spi,
+            esp_hal::gpio::Output::new(
+                cs_pin,
+                esp_hal::gpio::Level::Low,
+                esp_hal::gpio::OutputConfig::default(),
+            )
+        ).unwrap(),
         esp_hal::gpio::Output::new(
-            cs_pin,
+            dc_pin,
             esp_hal::gpio::Level::Low,
             esp_hal::gpio::OutputConfig::default(),
         ),
-    )
-    .unwrap();
-
-
-    // provide driver for spi_device
-
-    use display_interface_spi::SPIInterface;
-    let dc = esp_hal::gpio::Output::new(
-        dc_pin,
-        esp_hal::gpio::Level::Low,
-        esp_hal::gpio::OutputConfig::default(),
     );
-    let spi_interface = SPIInterface::new(spi_device, dc);
 
     // create the driver object
     let busy = esp_hal::gpio::Input::new(busy_pin, esp_hal::gpio::InputConfig::default());

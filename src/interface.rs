@@ -1,17 +1,9 @@
 /// use standard Display Errors
-// use display_interface::DisplayError;
+use display_interface::DisplayError;
 /// use standard Display SPI interface
 use display_interface_spi::SPIInterface;
 
-// provide embedded_hal abstractions
-use embedded_hal::digital::{InputPin, OutputPin};
-use embedded_hal::delay::DelayNs;
-use embedded_hal::spi::SpiDevice;
-#[cfg(feature = "async")]
-use embedded_hal_async::spi::SpiDevice as SpiDeviceAsync;
 
-
-#[maybe_async_cfg::maybe(sync(keep_self), async(feature = "async"))]
 pub struct Ssd1680Interface<SPI, DC, BUSY, RESET> {
     /// SPI device
     spi_interface: SPIInterface<SPI, DC>,
@@ -21,11 +13,15 @@ pub struct Ssd1680Interface<SPI, DC, BUSY, RESET> {
     reset: RESET,
 }
 
-#[maybe_async_cfg::maybe(
-    idents(SpiDevice(sync, async = "SpiDeviceAsync")),
-    sync(keep_self),
-    async(feature = "async")
-)]
+// provide embedded_hal abstractions
+use embedded_hal::digital::{InputPin, OutputPin};
+use embedded_hal::delay::DelayNs;
+
+#[cfg(not(feature = "async"))]
+use embedded_hal::spi::SpiDevice;
+#[cfg(feature = "async")]
+use embedded_hal_async::spi::SpiDevice;
+
 impl<SPI, DC, BUSY, RESET> Ssd1680Interface<SPI, DC, BUSY, RESET>
 where
     SPI: SpiDevice,
@@ -58,3 +54,38 @@ where
         self.reset.set_high().unwrap();
     }
 }
+
+#[cfg(not(feature = "async"))]
+use display_interface::WriteOnlyDataCommand;
+#[cfg(feature = "async")]
+use display_interface::AsyncWriteOnlyDataCommand;
+
+use display_interface::DataFormat;
+
+#[maybe_async_cfg::maybe(
+    idents(
+        AsyncWriteOnlyDataCommand(sync = "WriteOnlyDataCommand",  async = "AsyncWriteOnlyDataCommand")
+    ),
+    // sync(keep_self),
+    // async(keep_self, feature = "async")
+)]
+impl<SPI, DC, BUSY, RESET> AsyncWriteOnlyDataCommand for Ssd1680Interface<SPI, DC, BUSY, RESET>
+where
+    SPI: SpiDevice,
+    DC: OutputPin,
+    BUSY: InputPin,
+    RESET: OutputPin,
+{
+    /// Send a batch of commands to display
+    async fn send_commands(&mut self, cmd: DataFormat<'_>) -> Result<(), DisplayError>
+    {
+        self.spi_interface.send_commands(cmd).await
+    }
+
+    /// Send pixel data to display
+    async fn send_data(&mut self, buf: DataFormat<'_>) -> Result<(), DisplayError>
+    {
+        self.spi_interface.send_data(buf).await
+    }
+}
+

@@ -28,7 +28,10 @@ log = ["epd-ssd1680/log"]
 defmt = ["epd-ssd1680/defmt"]
 
 # use async SPI
-async = ["epd-ssd1680/async"]
+async = [
+    "embedded-hal-bus/async",
+    "epd-ssd1680/async"
+]
 
 
 # For fine tuning these settings, please refer to https://doc.rust-lang.org/cargo/reference/profiles.html
